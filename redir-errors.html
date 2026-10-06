@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Redirection des erreurs JS</title>
+    <style>
+        #log-container {
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            min-height: 50px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .error { color: #ff3333; font-weight: bold; }
+        .warning { color: #ffaa00; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h2>Console de la page</h2>
+    <!-- Le paragraphe qui va recevoir les messages -->
+    <p id="log-container">Les erreurs et warnings s'afficheront ici...<br></p>
+
+    <!-- Boutons de test -->
+    <button onclick="genererWarning()">Tester un Warning</button>
+    <button onclick="genererErreur()">Tester une Erreur</button>
+    <button onclick="genererErreurFatale()">Tester erreur non capturée</button>
+
+    <script>
+        // 1. Cibler le paragraphe de destination
+        const logContainer = document.getElementById('log-container');
+
+        // Fonction utilitaire pour ajouter le texte au paragraphe
+        function ajouterAuParagraphe(message, type) {
+            const span = document.createElement('span');
+            span.className = type;
+            span.textContent = `[${type.toUpperCase()}] ${message}\n`;
+            logContainer.appendChild(span);
+        }
+
+        // 2. Intercepter console.warn
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+            ajouterAuParagraphe(args.join(' '), 'warning');
+            originalWarn.apply(console, args); // Optionnel : garde aussi le log dans la vraie console devTools
+        };
+
+        // 3. Intercepter console.error
+        const originalError = console.error;
+        console.error = function(...args) {
+            ajouterAuParagraphe(args.join(' '), 'error');
+            originalError.apply(console, args); // Optionnel
+        };
+
+        // 4. Intercepter les erreurs globales du système (ex: variable indéfinie)
+        window.onerror = function(message, source, lineno, colno, error) {
+            const formatMessage = `${message} (Ligne ${lineno}, Col ${colno})`;
+            ajouterAuParagraphe(formatMessage, 'error');
+            return false; // Permet à l'erreur de continuer sa propagation normale
+        };
+
+        // --- FONCTIONS DE TEST ---
+        function genererWarning() {
+            console.warn("Ceci est un avertissement personnalisé !");
+        }
+
+        function genererErreur() {
+            console.error("Ceci est une erreur simulée via console.error.");
+        }
+
+        function genererErreurFatale() {
+            // Provoque une vraie erreur de syntaxe/exécution
+            maVariableInexistante.fonction();
+        }
+    </script>
+</body>
+</html>

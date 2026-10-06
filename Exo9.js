@@ -18,6 +18,7 @@ const canvas = document.querySelector("#canvas");
 const downloadButtonBlob = document.querySelector("#downloadBlob");
 const downloadButtonFrame = document.querySelector("#downloadFrame");
 const img = document.querySelector("#photo");
+const logContainer = document.getElementById('log-container');
 audioContainer.appendChild(audioVideo);
 let stream = null;
 let audioStream = null;
@@ -277,3 +278,32 @@ audioVideo.addEventListener("play", updateAudioButtons);
 updateButtons();
 updateAudioButtons();
 displayAudioInfo();
+
+// Fonction utilitaire pour ajouter le texte au paragraphe
+function ajouterAuParagraphe(message, type) {
+    const span = document.createElement('span');
+    span.className = type;
+    span.textContent = `[${type.toUpperCase()}] ${message}\n`;
+    logContainer.appendChild(span);
+}
+
+// 2. Intercepter console.warn
+const originalWarn = console.warn;
+console.warn = function(...args) {
+    ajouterAuParagraphe(args.join(' '), 'warning');
+    originalWarn.apply(console, args); // Optionnel : garde aussi le log dans la vraie console devTools
+};
+
+// 3. Intercepter console.error
+const originalError = console.error;
+console.error = function(...args) {
+    ajouterAuParagraphe(args.join(' '), 'error');
+    originalError.apply(console, args); // Optionnel
+};
+
+// 4. Intercepter les erreurs globales du système (ex: variable indéfinie)
+window.onerror = function(message, source, lineno, colno, error) {
+    const formatMessage = `${message} (Ligne ${lineno}, Col ${colno})`;
+    ajouterAuParagraphe(formatMessage, 'error');
+    return false; // Permet à l'erreur de continuer sa propagation normale
+};
