@@ -12,20 +12,28 @@ const pauseAudioButton = document.querySelector("#pause-audio");
 const audioContainer = document.querySelector("#audio-video");
 const audioVideo = document.createElement("audio");
 const audioInfo = document.querySelector("#audio-info");
-const photoButton = document.querySelector("#photo");
+const photoButtonBlob = document.querySelector("#photoBlob");
+const photoButtonFrame = document.querySelector("#photoFrame");
 const canvas = document.querySelector("#canvas");
-const downloadButton = document.querySelector("#download");
+const downloadButtonBlob = document.querySelector("#downloadBlob");
+const downloadButtonFrame = document.querySelector("#downloadFrame");
+const img = document.querySelector("#photo");
 audioContainer.appendChild(audioVideo);
 let stream = null;
 let audioStream = null;
+let imageCapture = null;
+let photoObjectUrl = null;
+let frameDataUrl = null;
 
 function updateButtons() {
     const streaming = stream !== null;
     startButton.disabled = streaming;
     stopButton.disabled = !streaming;
     pauseButton.disabled = !streaming;
-    photoButton.disabled = !streaming;
-    downloadButton.disabled = true;
+    photoButtonBlob.disabled = !streaming;
+    photoButtonFrame.disabled = !streaming;
+    downloadButtonBlob.disabled = photoObjectUrl === null;
+    downloadButtonFrame.disabled = frameDataUrl === null;
     fullscreenButton.disabled = !streaming || !document.fullscreenEnabled;
     const videoTrack = streaming ? stream.getVideoTracks()[0] : null;
     pauseButton.textContent = videoTrack && videoTrack.enabled
@@ -64,6 +72,10 @@ function displayTrackInfo() {
 async function startStream() {
     try {
         stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const videoTrack = stream.getVideoTracks()[0];
+        imageCapture = typeof ImageCapture === "undefined"
+            ? null
+            : new ImageCapture(videoTrack);
         video.srcObject = stream;
         displayTrackInfo();
         await video.play();
@@ -99,6 +111,12 @@ function stopStream() {
     video.pause();
     video.srcObject = null;
     stream = null;
+    imageCapture = null;
+    if (photoObjectUrl !== null) {
+        URL.revokeObjectURL(photoObjectUrl);
+        photoObjectUrl = null;
+    }
+    frameDataUrl = null;
     trackInfo.replaceChildren();
     updateButtons();
 }
@@ -142,13 +160,72 @@ function displayAudioInfo(errorMessage = null) {
     }
 }
 
-function takePhoto() {
+function takePhotoBlob() {
     if (stream === null) {
         return;
     }
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    downloadButton.disabled = false;
+    if (imageCapture !== null) {
+        imageCapture.takePhoto()
+            .then(displayPhotoBlob)
+            .catch((error) => console.error("takePhoto() error:", error));
+        return;
+    }
+
+    const photoCanvas = document.createElement("canvas");
+    photoCanvas.width = video.videoWidth;
+    photoCanvas.height = video.videoHeight;
+    photoCanvas.getContext("2d").drawImage(
+        video,
+        0,
+        0,
+        photoCanvas.width,
+        photoCanvas.height
+    );
+    photoCanvas.toBlob((blob) => {
+        if (blob !== null) {
+            displayPhotoBlob(blob);
+        }
+    }, "image/jpeg");
+}
+
+function displayPhotoBlob(blob) {
+    if (photoObjectUrl !== null) {
+        URL.revokeObjectURL(photoObjectUrl);
+    }
+    photoObjectUrl = URL.createObjectURL(blob);
+    img.src = photoObjectUrl;
+    downloadButtonBlob.disabled = false;
+}
+
+function takePhotoFrame() {
+    if (stream === null) {
+        return;
+    }
+    if (imageCapture !== null) {
+        imageCapture.grabFrame()
+            .then((imageBitmap) => {
+                canvas.width = imageBitmap.width;
+                canvas.height = imageBitmap.height;
+                canvas.getContext("2d").drawImage(imageBitmap, 0, 0);
+                frameDataUrl = canvas.toDataURL("image/png");
+                downloadButtonFrame.disabled = false;
+                imageBitmap.close();
+            })
+            .catch((error) => console.error("grabFrame() error:", error));
+        return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(
+        video,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+    frameDataUrl = canvas.toDataURL("image/png");
+    downloadButtonFrame.disabled = false;
 }
 
 startAudioButton.addEventListener("click", startAudioStream);
@@ -170,11 +247,24 @@ pauseButton.addEventListener("click", () => {
     }
 });
 fullscreenButton.addEventListener("click", () => video.requestFullscreen());
-photoButton.addEventListener("click", takePhoto);
-downloadButton.addEventListener("click", () => {
+photoButtonBlob.addEventListener("click", takePhotoBlob);
+photoButtonFrame.addEventListener("click", takePhotoFrame);
+downloadButtonBlob.addEventListener("click", () => {
+    if (photoObjectUrl === null) {
+        return;
+    }
     const link = document.createElement("a");
-    link.href = canvas.toDataURL();
-    link.download = "photo.png";
+    link.href = photoObjectUrl;
+    link.download = "photoBlob.png";
+    link.click();
+});
+downloadButtonFrame.addEventListener("click", () => {
+    if (frameDataUrl === null) {
+        return;
+    }
+    const link = document.createElement("a");
+    link.href = frameDataUrl;
+    link.download = "photoFrame.png";
     link.click();
 });
 

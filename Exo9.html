@@ -19,7 +19,8 @@
 		<button id="stop" type="button" disabled>Arrêter</button>
 		<button id="pause" type="button" disabled>Mettre en pause</button>
 		<button id="fullscreen" type="button" disabled>Plein écran</button>
-		<button id="photo" type="button" disabled>Prendre une photo</button>
+		<button id="photoBlob" type="button" disabled>Prendre une photo avec takePhoto</button>
+		<button id="photoFrame" type="button" disabled>Prendre une photo avec grabFrame</button>
 	</div>
 	<br>
 	<div>
@@ -29,8 +30,10 @@
 	</div>
 	<br>
 	<div>
+		<img id="photo" width="256" height="144" alt="Photo prise avec takePhoto()">
 		<canvas id="canvas" width="256" height="144"></canvas>
-		<button id="download" type="button" disabled>Télécharger la photo</button>
+		<button id="downloadBlob" type="button" disabled>Télécharger la photo blob</button>
+		<button id="downloadFrame" type="button" disabled>Télécharger la photo frame</button>
 	</div>
 	<script type="text/javascript" src="Exo9.js"></script>
 </body>
