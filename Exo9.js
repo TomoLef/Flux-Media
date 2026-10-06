@@ -137,7 +137,7 @@ function toggleTracks(tracks) {
     const enabled = tracks.every((track) => track.enabled);
     tracks.forEach((track) => {
         track.enabled = !enabled;
-    });
+    }); 
 }
 
 function displayAudioInfo(errorMessage = null) {
